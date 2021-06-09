@@ -54,28 +54,31 @@ for index in range(df_network.shape[0]):
         edges.append([('@'+initial_username), mention])
         nodes.append(mention)
       
-#The loop below will go through all of the previously mentioned 'nodes' and do exactly the same -- collect profile names that they #mention and append them to 'nodes' and 'edges' list:
+#The loop below will go through all of the previously mentioned 'nodes' and do exactly the same -- collect profile names that they #mention and append them to 'nodes' and 'edges' list.
+#The loop can throw an error due to the limit of tweets downloaded per request
+try:
+    for user in tqdm.tqdm(nodes):
+        if user in not_iterable:
+            continue
+        else:
+            scrap_tweets = api.user_timeline(screen_name = user, count = 10, include_rts = True)
 
-for user in tqdm.tqdm(nodes):
-    if user in not_iterable:
-        continue
-    else:
-        scrap_tweets = api.user_timeline(screen_name = user, count = 10, include_rts = True)
+            df_network_op = pd.DataFrame()
+            for tweet in scrap_tweets:
+                data = [tweet.user.screen_name, tweet.text, tweet.created_at]
+                df_op = pd.DataFrame(data)
+                df_network = df_network.append(df_op.T)
+                df_network_op = df_network_op.append(df_op.T)
 
-        df_network_op = pd.DataFrame()
-        for tweet in scrap_tweets:
-            data = [tweet.user.screen_name, tweet.text, tweet.created_at]
-            df_op = pd.DataFrame(data)
-            df_network = df_network.append(df_op.T)
-            df_network_op = df_network_op.append(df_op.T)
-                
-        for index in range(df_network_op.shape[0]):
-            mentions_to_list = find_mentions(df_network_op.iloc[index, 1])
-            for mention in mentions_to_list:
-                edges.append([(user), mention])
-                nodes.append(mention)
-                
-        not_iterable.append(user)
+            for index in range(df_network_op.shape[0]):
+                mentions_to_list = find_mentions(df_network_op.iloc[index, 1])
+                for mention in mentions_to_list:
+                    edges.append([(user), mention])
+                    nodes.append(mention)
+
+            not_iterable.append(user)
+except TweepError:
+      continue
       
 #End of scraping -- time for data processing¶
 #Create a list of unique nodes:
